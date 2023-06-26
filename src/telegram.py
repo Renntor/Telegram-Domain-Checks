@@ -9,22 +9,42 @@ from telebot import types
 bot = telebot.TeleBot('6116448329:AAFJfwwrr1BKKJXva-OnAIkOkfWMUHkNEIo')
 
 saver = Saver()
+
+
 @bot.message_handler(content_types='text')
 def user_interation(message: types.Message):
-    if message.text == 'Добавить домен':
+
+    if message.text == 'Добавить домен' or message.text == '/add_domain':
         bot.send_message(message.chat.id, 'Напишите название домена')
         bot.register_next_step_handler(message, adding_domain)
-    elif message.text == 'Удалить домен':
+    elif message.text == 'Удалить домен' or message.text == '/del_domain':
         bot.send_message(message.chat.id, 'Напишите название домена')
         bot.register_next_step_handler(message, del_domain)
-    elif message.text == 'Список доменов':
-        bot.register_next_step_handler(message, get_info_domain)
+    elif message.text == 'Список доменов' or message.text == '/get_info':
+        date = saver.get_info_file()[0]
+        if len(date)>0:
+            join = '\n'.join([i + ': ' + k for i, k in date.items()])
+            bot.send_message(message.chat.id, f'{join}')
+        else:
+            bot.send_message(message.chat.id, 'Список пустой')
+    else:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+
+        added_button = types.KeyboardButton("Добавить домен")
+        del_button = types.KeyboardButton("Удалить домен")
+        info_button = types.KeyboardButton("Список доменов")
+
+        markup.add(info_button)
+        markup.add(added_button, del_button)
+
+        bot.send_message(message.chat.id, 'Список доступных команд', reply_markup=markup)
 
 
 def adding_domain(message: types.Message):
     whois = Whois(message.text)
     try:
-        domain = {whois.get_info_domain()['result']['domain_name']: whois.get_info_domain()['result']['expiration_date']}
+        domain = {whois.get_info_domain()['result']['domain_name']:\
+                      whois.get_info_domain()['result']['expiration_date']}
         saver.adding_info_file(domain)
         bot.send_message(message.chat.id, 'Добавился!')
     except TypeError:
@@ -38,24 +58,6 @@ def del_domain(message: types.Message):
         bot.send_message(message.chat.id, f'Неверный домен!')
 
 
-def get_info_domain(message: types.Message):
-    pass
-
-
-@bot.message_handler()
-def markup_button(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-
-    added_button = types.KeyboardButton("Добавить домен")
-    del_button = types.KeyboardButton("Удалить домен")
-    info_button = types.KeyboardButton("Список доменов")
-
-    markup.add(info_button)
-    markup.add(added_button, del_button)
-
-    bot.send_message(message.chat.id, 'Список доступных команд', reply_markup=markup)
-
-
 #
 #
 # def user_input(message):
@@ -65,6 +67,19 @@ def markup_button(message):
 #         bot.send_message(message.chat.id, 'Удаляем домен')
 #     elif message == 'Список доменов':
 #         bot.send_message(message.chat.id, 'Выводим список доменов')
+
+# @bot.message_handler()
+# def markup_button(message):
+#     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+#
+#     added_button = types.KeyboardButton("Добавить домен")
+#     del_button = types.KeyboardButton("Удалить домен")
+#     info_button = types.KeyboardButton("Список доменов")
+#
+#     markup.add(info_button)
+#     markup.add(added_button, del_button)
+#
+#     bot.send_message(message.chat.id, 'Список доступных команд', reply_markup=markup)
 
 
 bot.polling(none_stop=True)

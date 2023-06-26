@@ -14,10 +14,10 @@ class Saver:
         """
         if os.path.exists(self.file) is False:
             with open(self.file, 'w', encoding='utf-8') as f:
-                f.write('[]')
+                f.write('[{}]')
 
         json_domain = ujson.load(open(self.file))
-        json_domain.append(domain)
+        json_domain[0].update(domain)
 
         with open(self.file, 'w', encoding='utf-8') as f:
             ujson.dump(json_domain, f, indent=2, ensure_ascii=False, escape_forward_slashes=False)
@@ -30,14 +30,11 @@ class Saver:
         """
         try:
             json_domain = ujson.load(open(self.file))
-            for i in json_domain:
-                if name in i:
-                    json_domain.remove(i)
-                    break
+            json_domain[0].pop(name.upper())
             with open(self.file, 'w', encoding='utf-8') as f:
                 ujson.dump(json_domain, f, indent=2, ensure_ascii=False, escape_forward_slashes=False)
             return True
-        except BaseException:
+        except KeyError:
             return False
 
     def get_info_file(self) -> list:
@@ -45,5 +42,9 @@ class Saver:
         Вывод списка доменов и время их жизни
         :return: None
         """
-        with open(self.file, 'r', encoding='utf-8') as f:
-            return ujson.load(f)
+        try:
+            with open(self.file, 'r', encoding='utf-8') as f:
+                return ujson.load(f)
+        except FileNotFoundError:
+            with open(self.file, 'w', encoding='utf-8') as f:
+                f.write('[{}]')
