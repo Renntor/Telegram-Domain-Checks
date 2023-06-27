@@ -1,29 +1,37 @@
-from src.whois import Whois
+import os
 from src.saver import Saver
-import ujson
 from datetime import datetime
 import telebot
 from telebot import types
+from whois import whois
 
-
-bot = telebot.TeleBot('6116448329:AAFJfwwrr1BKKJXva-OnAIkOkfWMUHkNEIo')
-
+api = os.environ.get('API_TELEBOT')
+bot = telebot.TeleBot(api)
 saver = Saver()
+format = '%Y-%m-%d %H:%M:%S'
 
 
 @bot.message_handler(content_types='text')
 def user_interation(message: types.Message):
+    """
+    Взаимодействие с пользователем
+    :param message: текст пользователя
+    :return: None
+    """
 
-    if message.text == 'Добавить домен' or message.text == '/add_domain':
+    if message.text in ['Добавить домен', '/add_domain']:
         bot.send_message(message.chat.id, 'Напишите название домена')
         bot.register_next_step_handler(message, adding_domain)
-    elif message.text == 'Удалить домен' or message.text == '/del_domain':
+    elif message.text in ['Удалить домен', '/del_domain']:
         bot.send_message(message.chat.id, 'Напишите название домена')
         bot.register_next_step_handler(message, del_domain)
-    elif message.text == 'Список доменов' or message.text == '/get_info':
+    elif message.text in ['Список доменов', '/get_info'] :
         date = saver.get_info_file()[0]
-        if len(date)>0:
-            join = '\n'.join([i + ': ' + k for i, k in date.items()])
+        # проверка на пустой список
+        if len(date) > 0:
+            # Вывод название домена: время жизни
+            join = '\n'.join([f"{i}: осталось {(datetime.strptime(k, format) - datetime.now()).days}\
+ дней" for i, k in date.items()])
             bot.send_message(message.chat.id, f'{join}')
         else:
             bot.send_message(message.chat.id, 'Список пустой')
@@ -37,66 +45,39 @@ def user_interation(message: types.Message):
         markup.add(info_button)
         markup.add(added_button, del_button)
 
-        bot.send_message(message.chat.id, 'Список доступных команд', reply_markup=markup)
+        bot.send_message(message.chat.id, '''Список доступных команд:
+/add_domain - Добавить домен
+/del_domain - Удалить домен
+/get_info - Список доменов''', reply_markup=markup)
 
 
 def adding_domain(message: types.Message):
-    whois = Whois(message.text)
+    """
+    Добавление домена в список
+    :param message: название домена
+    :return: None
+    """
     try:
-        domain = {whois.get_info_domain()['result']['domain_name']:\
-                      whois.get_info_domain()['result']['expiration_date']}
-        saver.adding_info_file(domain)
-        bot.send_message(message.chat.id, 'Добавился!')
+        domain = {message.text.upper(): str(whois(message.text).expiration_date)}
+        if whois(message.text).expiration_date is not None:
+            saver.adding_info_file(domain)
+            bot.send_message(message.chat.id, 'Добавился!')
+        else:
+            bot.send_message(message.chat.id, 'Неверный домен!')
     except TypeError:
         bot.send_message(message.chat.id, 'Неверный домен!')
 
 
 def del_domain(message: types.Message):
+    """
+    Удаление домена из списка
+    :param message: название домена
+    :return: None
+    """
     if saver.del_info_file(message.text.upper()):
         bot.send_message(message.chat.id, f'Домен {message.text} удален!')
     else:
         bot.send_message(message.chat.id, f'Неверный домен!')
 
 
-#
-#
-# def user_input(message):
-#     if message == "Добавить домен":
-#         bot.send_message(message.chat.id, 'Добавляем домен')
-#     elif message == 'Удалить домен':
-#         bot.send_message(message.chat.id, 'Удаляем домен')
-#     elif message == 'Список доменов':
-#         bot.send_message(message.chat.id, 'Выводим список доменов')
-
-# @bot.message_handler()
-# def markup_button(message):
-#     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-#
-#     added_button = types.KeyboardButton("Добавить домен")
-#     del_button = types.KeyboardButton("Удалить домен")
-#     info_button = types.KeyboardButton("Список доменов")
-#
-#     markup.add(info_button)
-#     markup.add(added_button, del_button)
-#
-#     bot.send_message(message.chat.id, 'Список доступных команд', reply_markup=markup)
-
-
 bot.polling(none_stop=True)
-
-
-# u = Saver()
-# e = Whois('ya.ru')
-# w = e.get_info_domain()
-# t = {w['result']["domain_name"]: w['result']['expiration_date']}
-# u.adding_info_file(t)
-
-
-# i = datetime.strptime('2023-12-11 19:43:57', '%Y-%m-%d %H:%M:%S')
-#
-# print(i - datetime.now())
-
-#
-# @bot.message_handler()
-# def info(message):
-#     bot.send_message(message.chat.id, f'{saver.get_info_file()}')

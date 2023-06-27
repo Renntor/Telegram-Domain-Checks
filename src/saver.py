@@ -18,7 +18,6 @@ class Saver:
 
         json_domain = ujson.load(open(self.file))
         json_domain[0].update(domain)
-
         with open(self.file, 'w', encoding='utf-8') as f:
             ujson.dump(json_domain, f, indent=2, ensure_ascii=False, escape_forward_slashes=False)
 
