@@ -4,6 +4,8 @@ from datetime import datetime
 import telebot
 from telebot import types
 from whois import whois
+from whois_search import WhoisSearch
+
 
 api = os.environ.get('API_TELEBOT')
 bot = telebot.TeleBot(api)
@@ -58,12 +60,18 @@ def adding_domain(message: types.Message):
     :return: None
     """
     try:
-        domain = {message.text.upper(): str(whois(message.text).expiration_date)}
-        if whois(message.text).expiration_date is not None:
+        value = whois(message.text).expiration_date
+        if value is not None:
+            if type(value) is list:
+                value = value[1]
+            domain = {message.text.upper(): str(value)}
             saver.adding_info_file(domain)
             bot.send_message(message.chat.id, 'Добавился!')
         else:
-            bot.send_message(message.chat.id, 'Неверный домен!')
+            whoisserch = WhoisSearch(message.text)
+            domain = {message.text.upper(): whoisserch.get_date()}
+            saver.adding_info_file(domain)
+            bot.send_message(message.chat.id, 'Добавился!')
     except TypeError:
         bot.send_message(message.chat.id, 'Неверный домен!')
 
