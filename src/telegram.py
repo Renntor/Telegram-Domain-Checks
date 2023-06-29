@@ -5,12 +5,53 @@ import telebot
 from telebot import types
 from whois import whois
 from whois_search import WhoisSearch
+from threading import Timer
+import ujson
 
 
 api = os.environ.get('API_TELEBOT')
 bot = telebot.TeleBot(api)
 saver = Saver()
 format = '%Y-%m-%d %H:%M:%S'
+path_file = os.path.join('..', 'src', 'chat_id.json')
+
+@bot.message_handler(commands=['start'])
+def save_chat_id(message: types.Message) -> None:
+    """
+    Сохранение id в файл
+    :param message: str
+    :return: None
+    """
+    file = open(path_file, 'r', encoding='utf-8')
+    json_list = set(ujson.load(file))
+    file.close()
+    with open(path_file, 'w', encoding='utf-8') as f:
+        if message.chat.id not in json_list:
+            bot.send_message(message.chat.id, 'Уведомления включены')
+        json_list.update({message.chat.id})
+        ujson.dump(list(json_list), f)
+    user_interation(message)
+
+
+@bot.message_handler(commands=['off'])
+def del_chat_id(message: types.Message) -> None:
+    """
+    Удаление id из файла
+    :param message: str
+    :return: None
+    """
+    file = open(path_file, 'r', encoding='utf-8')
+    json_list = ujson.load(file)
+    file.close()
+    try:
+        with open(path_file, 'w', encoding='utf-8') as f:
+            json_list.remove(message.chat.id)
+            ujson.dump(json_list, f)
+        bot.send_message(message.chat.id, 'Уведомления отключены. Для включение наберите /start')
+    except ValueError:
+        with open(path_file, 'w', encoding='utf-8') as f:
+            ujson.dump(json_list, f)
+
 
 
 @bot.message_handler(content_types='text')
@@ -31,6 +72,8 @@ def user_interation(message: types.Message):
         date = saver.get_info_file()[0]
         # проверка на пустой список
         if len(date) > 0:
+            # сортировка по дате
+            date = dict(sorted(date.items(), key=lambda item: item[1]))
             # Вывод название домена: время жизни
             join = '\n'.join([f"{i}: осталось {(datetime.strptime(k, format) - datetime.now()).days}\
  дней" for i, k in date.items()])
@@ -50,7 +93,9 @@ def user_interation(message: types.Message):
         bot.send_message(message.chat.id, '''Список доступных команд:
 /add_domain - Добавить домен
 /del_domain - Удалить домен
-/get_info - Список доменов''', reply_markup=markup)
+/get_info - Список доменов
+/off - для отключения уведомлений''', reply_markup=markup)
+
 
 
 def adding_domain(message: types.Message):
@@ -68,8 +113,8 @@ def adding_domain(message: types.Message):
             saver.adding_info_file(domain)
             bot.send_message(message.chat.id, 'Добавился!')
         else:
-            whoisserch = WhoisSearch(message.text)
-            domain = {message.text.upper(): whoisserch.get_date()}
+            whois_search = WhoisSearch(message.text)
+            domain = {message.text.upper(): whois_search.get_date()}
             saver.adding_info_file(domain)
             bot.send_message(message.chat.id, 'Добавился!')
     except TypeError:
