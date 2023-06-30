@@ -73,9 +73,15 @@ def telegram():
             if len(date) > 0:
                 # сортировка по дате
                 date = dict(sorted(date.items(), key=lambda item: item[1]))
-                # Вывод название домена: время жизни
-                join = '\n'.join([f"{i}: осталось {(datetime.strptime(k, format) - datetime.now()).days} \
-дней" for i, k in date.items()])
+                # Список {название домена: время жизни домена}
+                list_join = []
+                for i, k in date.items():
+                    if k == 'Информация отсутствует':
+                        list_join.append(f'О домене {i} нет информации')
+                    else:
+                        list_join.append(f'{i}: осталось {(datetime.strptime(k, format) - datetime.now()).days} дней')
+                join = '\n'.join(list_join)
+
                 bot.send_message(message.chat.id, f'{join}')
             else:
                 bot.send_message(message.chat.id, 'Список пустой')
@@ -95,7 +101,7 @@ def telegram():
 /get_info - Список доменов
 /off - для отключения уведомлений''', reply_markup=markup)
 
-    def adding_domain(message: types.Message):
+    def adding_domain(message: types.Message) -> None:
         """
         Добавление домена в список
         :param message: название домена
@@ -117,7 +123,7 @@ def telegram():
         except TypeError:
             bot.send_message(message.chat.id, 'Неверный домен!')
 
-    def del_domain(message: types.Message):
+    def del_domain(message: types.Message) -> None:
         """
         Удаление домена из списка
         :param message: название домена
@@ -129,4 +135,3 @@ def telegram():
             bot.send_message(message.chat.id, f'Неверный домен!')
 
     bot.polling(none_stop=True)
-
