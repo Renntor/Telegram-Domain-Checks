@@ -10,7 +10,7 @@ path_file = os.path.join('..', 'src', 'chat_id.json')
 api = os.environ.get('API_TELEBOT')
 bot = telebot.TeleBot(api)
 
-tel = Thread(target=telegram)
+tel = Thread(target=telegram, daemon=True)
 info = Thread(target=update_info, daemon=True)
 alarm = Thread(target=send_alarm, daemon=True)
 
@@ -20,7 +20,7 @@ try:
         tel.join(), info.join(), alarm.join()
 
 
-except BaseException:
+except:
     file = open(path_file, 'r', encoding='utf-8')
     test_json = ujson.load(file)
     file.close()
