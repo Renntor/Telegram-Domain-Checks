@@ -21,8 +21,9 @@ try:
 
 
 except:
-    file = open(path_file, 'r', encoding='utf-8')
-    test_json = ujson.load(file)
-    file.close()
-    for i in test_json:
-        bot.send_message(i, 'Да заткнись ты, дай хоть умереть спокойно')
+    print('бот упал')
+    # file = open(path_file, 'r', encoding='utf-8')
+    # test_json = ujson.load(file)
+    # file.close()
+    # for i in test_json:
+    #     bot.send_message(i, 'Да заткнись ты, дай хоть умереть спокойно')

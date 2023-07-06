@@ -10,10 +10,9 @@ import telebot
 
 saver = Saver()
 format ='%Y-%m-%d %H:%M:%S'
-path_file = os.path.join('..', 'src', 'chat_id.json')
+path_file = os.path.join('..', 'src', 'group.json')
 api = os.environ.get('API_TELEBOT')
 bot = telebot.TeleBot(api)
-
 
 def update_info() -> None:
     """
@@ -40,9 +39,9 @@ def update_info() -> None:
                         saver.adding_info_file(domain)
                 except Exception:
                     pass
-        Timer(86400, update_info).start()
+        Timer(3600, update_info).start()
     except BaseException:
-        time.sleep(600)
+        time.sleep(30)
         update_info()
 
 
@@ -54,12 +53,13 @@ def send_alarm() -> None:
     try:
         date = saver.get_info_file()[0]
         if len(date) > 0:
+            date = dict(sorted(date.items(), key=lambda item: item[1]))
             # список доменов с истекающим сроком
             join = []
             for i, k in date.items():
                 if k == 'Информация отсутствует':
                     continue
-                elif (datetime.strptime(k, format) - datetime.now()).days <= 14:
+                elif (datetime.strptime(k, format) - datetime.now()).days <= 63:
                     join.append(f'У домена {i} осталось {(datetime.strptime(k, format) - datetime.now()).days} дней!')
             # отправка доменов с истекающим сроком жизни
             if len(join) > 0:
@@ -68,7 +68,7 @@ def send_alarm() -> None:
                 file.close()
                 for i in test_json:
                     bot.send_message(i, '\n'.join(join))
-        Timer(86400, send_alarm).start()
+        Timer(300, send_alarm).start()
     except BaseException:
-        time.sleep(600)
+        time.sleep(30)
         send_alarm()
