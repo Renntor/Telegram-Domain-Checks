@@ -1,18 +1,18 @@
 import time
 import os
-import ujson
-from whois import whois
 from src.saver import Saver
 from datetime import datetime
+import ujson
 from whois_search import WhoisSearch
 from threading import Timer
 import telebot
 
 saver = Saver()
 format ='%Y-%m-%d %H:%M:%S'
-path_file = os.path.join('..', 'src', 'group.json')
+info_file = os.path.join('..', 'src', 'info.json')
 api = os.environ.get('API_TELEBOT')
 bot = telebot.TeleBot(api)
+
 
 def update_info() -> None:
     """
@@ -27,19 +27,12 @@ def update_info() -> None:
                 time.sleep(0.5)
                 try:
                     # обновление данных по домену
-                    value = whois(i).expiration_date
-                    if value is not None:
-                        if type(value) is list:
-                            value = value[1]
-                        domain = {i.upper(): str(value)}
-                        saver.adding_info_file(domain)
-                    else:
-                        whois_search = WhoisSearch(i)
-                        domain = {i.upper(): whois_search.get_date()}
-                        saver.adding_info_file(domain)
-                except Exception:
+                    whois_search = WhoisSearch(i)
+                    domain = {i.upper(): whois_search.get_date()}
+                    saver.adding_info_file(domain)
+                except BaseException:
                     pass
-        Timer(3600, update_info).start()
+        Timer(86400, update_info).start()
     except BaseException:
         time.sleep(30)
         update_info()
@@ -59,16 +52,16 @@ def send_alarm() -> None:
             for i, k in date.items():
                 if k == 'Информация отсутствует':
                     continue
-                elif (datetime.strptime(k, format) - datetime.now()).days <= 63:
+                elif (datetime.strptime(k, format) - datetime.now()).days <= 14:
                     join.append(f'У домена {i} осталось {(datetime.strptime(k, format) - datetime.now()).days} дней!')
             # отправка доменов с истекающим сроком жизни
             if len(join) > 0:
-                file = open(path_file, 'r', encoding='utf-8')
+                file = open(info_file, 'r', encoding='utf-8')
                 test_json = ujson.load(file)
                 file.close()
                 for i in test_json:
                     bot.send_message(i, '\n'.join(join))
-        Timer(300, send_alarm).start()
+        Timer(86400, send_alarm).start()
     except BaseException:
-        time.sleep(30)
+        time.sleep(10)
         send_alarm()

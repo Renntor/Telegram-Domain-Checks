@@ -3,7 +3,6 @@ from src.saver import Saver
 from datetime import datetime
 import telebot
 from telebot import types
-from whois import whois
 from whois_search import WhoisSearch
 import ujson
 import time
@@ -14,8 +13,8 @@ def telegram():
     bot = telebot.TeleBot(api)
     saver = Saver()
     format = '%Y-%m-%d %H:%M:%S'
-    path_file = os.path.join('..', 'src', 'chat_id.json')
-    path_group = os.path.join('..', 'src', 'group.json')
+    chat_id_file = os.path.join('..', 'src', 'chat_id.json')
+    info_file = os.path.join('..', 'src', 'info.json')
     try:
         @bot.message_handler(commands=['start'])
         def save_chat_id(message: types.Message) -> None:
@@ -24,9 +23,7 @@ def telegram():
             :param message: str
             :return: None
             """
-            bot.send_message(message.chat.id, """Выберите режим работы бота
-/info
-/admin""")
+            bot.send_message(message.chat.id, "Выберите режим работы бота\n/info\n/admin")
             bot.register_next_step_handler(message, adding_status)
 
         @bot.message_handler(commands=['info', 'admin'])
@@ -37,45 +34,29 @@ def telegram():
             :return: None
             """
             if message.text in ['/info', '/info@'+f'{bot.get_me().username}']:
-                group = open(path_group, 'r', encoding='utf-8')
+                group = open(info_file, 'r', encoding='utf-8')
                 json_group = set(ujson.load(group))
                 group.close()
-                try:
-                    with open(path_group, 'w', encoding='utf-8') as f:
-                        if message.chat.id not in json_group:
-                            bot.send_message(message.chat.id, 'Уведомления включены')
-                        else:
-                            bot.send_message(message.chat.id, 'Уведомления уже включены')
-                        json_group.update({message.chat.id})
-                        ujson.dump(list(json_group), f)
-                except ValueError:
-                    with open(path_group, 'w', encoding='utf-8') as f:
-                        ujson.dump(json_group, f)
-                except FileNotFoundError:
-                    with open(path_group, 'w', encoding='utf-8') as f:
-                        ujson.dump('[]', f)
+                with open(info_file, 'w', encoding='utf-8') as f:
+                    if message.chat.id not in json_group:
+                        bot.send_message(message.chat.id, 'Уведомления включены')
+                    else:
+                        bot.send_message(message.chat.id, 'Уведомления уже включены')
+                    json_group.update({message.chat.id})
+                    ujson.dump(list(json_group), f)
 
             elif message.text in ['/admin', '/admin@'+f'{bot.get_me().username}']:
-                file = open(path_file, 'r', encoding='utf-8')
+                file = open(chat_id_file, 'r', encoding='utf-8')
                 json_list = set(ujson.load(file))
                 file.close()
-                try:
-                    with open(path_file, 'w', encoding='utf-8') as f:
-                        if message.chat.id not in json_list:
-                            bot.send_message(message.chat.id, 'Вы стали администратором')
-                        else:
-                            bot.send_message(message.chat.id, 'Вы уже являетесь администратором')
-                        json_list.update({message.chat.id})
-                        ujson.dump(list(json_list), f)
-                    user_interation(message)
-                except ValueError:
-                    with open(path_file, 'w', encoding='utf-8') as f:
-                        ujson.dump(json_list, f)
-                except FileNotFoundError:
-                    with open(path_file, 'w', encoding='utf-8') as f:
-                        ujson.dump('[]', f)
-            else:
-                bot.send_message(message.chat.id, 'Неверные данные.')
+                with open(chat_id_file, 'w', encoding='utf-8') as f:
+                    if message.chat.id not in json_list:
+                        bot.send_message(message.chat.id, 'Вы стали администратором')
+                    else:
+                        bot.send_message(message.chat.id, 'Вы уже являетесь администратором')
+                    json_list.update({message.chat.id})
+                    ujson.dump(list(json_list), f)
+                user_interation(message)
 
         @bot.message_handler(commands=['off'])
         def del_chat_id(message: types.Message):
@@ -84,10 +65,7 @@ def telegram():
             :param message: str
             :return: None
             """
-            bot.send_message(message.chat.id, """Выберите режим работы бота
-/off_info
-/off_admin""")
-            bot.register_next_step_handler(message, del_id)
+            bot.send_message(message.chat.id, "Выберите режим работы бот\n/off_info\n/off_admin")
 
         @bot.message_handler(commands=['off_info', 'off_admin'])
         def del_id(message: types.Message) -> None:
@@ -98,39 +76,34 @@ def telegram():
             """
             #  удаление из админки
             if message.text in ['/off_admin', '/off_admin@'+f'{bot.get_me().username}']:
-                file = open(path_file, 'r', encoding='utf-8')
+                file = open(chat_id_file, 'r', encoding='utf-8')
                 json_list = ujson.load(file)
                 file.close()
                 try:
-                    with open(path_file, 'w', encoding='utf-8') as f:
+                    with open(chat_id_file, 'w', encoding='utf-8') as f:
                         json_list.remove(message.chat.id)
                         ujson.dump(json_list, f)
                     bot.send_message(message.chat.id, 'Админка отключена. Для выбора роли наберите /start')
                 except ValueError:
-                    with open(path_file, 'w', encoding='utf-8') as f:
+                    with open(chat_id_file, 'w', encoding='utf-8') as f:
                         ujson.dump(json_list, f)
                     bot.send_message(message.chat.id, 'Вы не являетесь админом')
-                except FileNotFoundError:
-                    with open(path_file, 'w', encoding='utf-8') as f:
-                        ujson.dump('[]', f)
 
             #  удаление из информации
             elif message.text in ['/off_info', '/off_info@'+f'{bot.get_me().username}']:
-                file_group = open(path_group, 'r', encoding='utf-8')
+                file_group = open(info_file, 'r', encoding='utf-8')
                 json_group = ujson.load(file_group)
                 file_group.close()
                 try:
-                    with open(path_group, 'w', encoding='utf-8') as f:
+                    with open(info_file, 'w', encoding='utf-8') as f:
                         json_group.remove(message.chat.id)
                         ujson.dump(json_group, f)
                     bot.send_message(message.chat.id, 'Уведомления отключены. Для выбора роли наберите /start')
                 except ValueError:
-                    with open(path_group, 'w', encoding='utf-8') as f:
+                    with open(info_file, 'w', encoding='utf-8') as f:
                         ujson.dump(json_group, f)
                     bot.send_message(message.chat.id, 'Вы не подписаны на получение информации')
-                except FileNotFoundError:
-                    with open(path_group, 'w', encoding='utf-8') as f:
-                        ujson.dump('[]', f)
+
         @bot.message_handler(commands=['help', 'get_info', 'add_domain', 'del_domain'])
         def user_interation(message: types.Message):
             """
@@ -138,13 +111,7 @@ def telegram():
             :param message: текст пользователя
             :return: None
             """
-            try:
-                file = open(path_file, 'r', encoding='utf-8')
-            except FileNotFoundError:
-                f = open(path_file, 'w', encoding='utf-8')
-                ujson.dump('[]', f)
-                f.close()
-                file = open(path_file, 'r', encoding='utf-8')
+            file = open(chat_id_file, 'r', encoding='utf-8')
             check = ujson.load(file)
             file.close()
             if message.chat.id in check:
@@ -168,8 +135,8 @@ def telegram():
                             if k == 'Информация отсутствует':
                                 list_join.append(f'О домене {i} нет информации')
                             else:
-                                list_join.append(f'{i}: осталось {(datetime.strptime(k, format) - datetime.now()).days} \
-дней')
+                                list_join.append(f'{i}: осталось {(datetime.strptime(k, format) - datetime.now()).days}\
+ дней')
                         join = '\n'.join(list_join)
 
                         bot.send_message(message.chat.id, f'{join}')
@@ -189,14 +156,7 @@ def telegram():
             :param message: название домена
             :return: None
             """
-            value = whois(message.text).expiration_date
-            if value is not None:
-                if type(value) is list:
-                    value = value[1]
-                domain = {message.text.upper(): str(value)}
-                saver.adding_info_file(domain)
-                bot.send_message(message.chat.id, 'Добавился!')
-            elif '.' in message.text:
+            if '.' in message.text:
                 whois_search = WhoisSearch(message.text)
                 domain = {message.text.upper(): whois_search.get_date()}
                 saver.adding_info_file(domain)
@@ -216,11 +176,7 @@ def telegram():
                 bot.send_message(message.chat.id, f'Неверный домен!')
 
         bot.polling(none_stop=True)
-    except:
-        with open(path_file, 'r', encoding='utf-8') as f:
-            if len(f) > 0:
-                for i in f:
-                    bot.send_message(i, f'Бот сломался и пытается восстановится.')
+    except BaseException:
         time.sleep(0.5)
         telegram()
 

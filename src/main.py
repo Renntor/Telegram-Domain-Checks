@@ -2,7 +2,6 @@ from utils import update_info, send_alarm
 from telegram import telegram
 from threading import Thread
 import os
-import ujson
 import telebot
 
 
